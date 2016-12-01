@@ -16,6 +16,7 @@
 
 package io.confluent.connect.elasticsearch;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Date;
 import org.apache.kafka.connect.data.Decimal;
@@ -31,6 +32,7 @@ import org.apache.kafka.connect.json.JsonConverter;
 import org.apache.kafka.connect.sink.SinkRecord;
 import org.apache.kafka.connect.storage.Converter;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -44,9 +46,12 @@ import static io.confluent.connect.elasticsearch.ElasticsearchSinkConnectorConst
 public class DataConverter {
 
   private static final Converter JSON_CONVERTER;
+  private static final ObjectMapper JSON_OBJECT_MAPPER;
+
   static {
     JSON_CONVERTER = new JsonConverter();
     JSON_CONVERTER.configure(Collections.singletonMap("schemas.enable", "false"), false);
+    JSON_OBJECT_MAPPER = new ObjectMapper();
   }
 
   private static String convertKey(Schema keySchema, Object key) {
@@ -76,22 +81,46 @@ public class DataConverter {
     }
   }
 
-  public static IndexableRecord convertRecord(SinkRecord record, String index, String type, boolean ignoreKey, boolean ignoreSchema) {
-    final String id;
-    if (ignoreKey) {
-      id = record.topic() + "+" + String.valueOf((int) record.kafkaPartition()) + "+" + String.valueOf(record.kafkaOffset());
-    } else {
-      id = DataConverter.convertKey(record.keySchema(), record.key());
-    }
-
+  public static IndexableRecord convertRecord(SinkRecord record, String index, String type, boolean jsonKey, boolean ignoreKey, boolean ignoreSchema) {
     final Schema schema;
     final Object value;
-    if (!ignoreSchema) {
-      schema = preProcessSchema(record.valueSchema());
-      value = preProcessValue(record.value(), record.valueSchema(), schema);
-    } else {
+    final String id;
+
+    if (jsonKey) {
+      /*
+       * SPECIAL CRUNCHBASE-SPECIFIC JSON KEY CONSISTING OF A UUID+INDEX PAIR THAT OVERRIDES THE STANDARD CONNECTOR LOGIC
+       */
       schema = record.valueSchema();
       value = record.value();
+
+      try {
+        byte[] keyBytes = JSON_CONVERTER.fromConnectData(record.topic(), record.keySchema(), record.key());
+        String keyString = new String(keyBytes, StandardCharsets.UTF_8);
+        Map keyJson = JSON_OBJECT_MAPPER.readValue(keyString, Map.class);
+        id = keyJson.get("uuid").toString();
+        index = (record.topic() + "-" + keyJson.get("index").toString()).toLowerCase();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+
+    } else {
+      /*
+       * STANDARD CONNECTOR LOGIC
+       */
+      if (ignoreKey) {
+        id = record.topic() + "+" + String.valueOf((int) record.kafkaPartition()) + "+" + String.valueOf(record.kafkaOffset());
+      } else {
+        id = DataConverter.convertKey(record.keySchema(), record.key());
+      }
+
+      if (!ignoreSchema) {
+        schema = preProcessSchema(record.valueSchema());
+        value = preProcessValue(record.value(), record.valueSchema(), schema);
+      } else {
+        schema = record.valueSchema();
+        value = record.value();
+      }
+
     }
 
     final String payload = new String(JSON_CONVERTER.fromConnectData(record.topic(), schema, value), StandardCharsets.UTF_8);

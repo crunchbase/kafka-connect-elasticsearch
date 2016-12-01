@@ -37,6 +37,11 @@ public class ElasticsearchSinkConnectorConfig extends AbstractConfig {
   private static final String TYPE_NAME_DOC = "The type to use for each index.";
   private static final String TYPE_NAME_DISPLAY = "Type Name";
 
+  public static final String KEY_JSON_CONFIG = "key.json";
+  private static final String KEY_JSON_DOC = "Special crunchbase-specific key indicating the key will be a uuid+index json pair.";
+  private static final boolean KEY_JSON_DEFAULT = false;
+  private static final String KEY_JSON_DISPLAY = "Json Key";
+
   public static final String KEY_IGNORE_CONFIG = "key.ignore";
   private static final String KEY_IGNORE_DOC =
       "Whether to ignore the key during indexing. When this is set to true, only the value from the message will be written to Elasticsearch. "
@@ -120,6 +125,7 @@ public class ElasticsearchSinkConnectorConfig extends AbstractConfig {
         .define(CONNECTION_URL_CONFIG, Type.STRING, Importance.HIGH, CONNECTION_URL_DOC, ELASTICSEARCH_GROUP, 1, Width.LONG,
                 CONNECTION_URL_DISPLAY)
         .define(TYPE_NAME_CONFIG, Type.STRING, Importance.HIGH, TYPE_NAME_DOC, ELASTICSEARCH_GROUP, 2, Width.SHORT, TYPE_NAME_DISPLAY)
+        .define(KEY_JSON_CONFIG, Type.BOOLEAN, KEY_JSON_DEFAULT, Importance.HIGH, KEY_JSON_DOC, CONNECTOR_GROUP, 3, Width.SHORT, KEY_JSON_DISPLAY)
         .define(KEY_IGNORE_CONFIG, Type.BOOLEAN, KEY_IGNORE_DEFAULT, Importance.HIGH, KEY_IGNORE_DOC, CONNECTOR_GROUP, 3, Width.SHORT, KEY_IGNORE_DISPLAY)
         .define(BATCH_SIZE_CONFIG, Type.INT, BATCH_SIZE_DEFAULT, Importance.MEDIUM, BATCH_SIZE_DOC, CONNECTOR_GROUP, 4, Width.SHORT, BATCH_SIZE_DISPLAY)
         .define(MAX_IN_FLIGHT_REQUESTS_CONFIG, Type.INT, MAX_IN_FLIGHT_REQUESTS_DEFAULT, Importance.MEDIUM,
