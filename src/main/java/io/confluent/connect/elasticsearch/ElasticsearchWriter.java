@@ -42,6 +42,7 @@ public class ElasticsearchWriter {
 
   private final JestClient client;
   private final String type;
+  private final boolean jsonKey;
   private final boolean ignoreKey;
   private final Set<String> ignoreKeyTopics;
   private final boolean ignoreSchema;
@@ -55,6 +56,7 @@ public class ElasticsearchWriter {
   ElasticsearchWriter(
       JestClient client,
       String type,
+      boolean jsonKey,
       boolean ignoreKey,
       Set<String> ignoreKeyTopics,
       boolean ignoreSchema,
@@ -70,6 +72,7 @@ public class ElasticsearchWriter {
   ) {
     this.client = client;
     this.type = type;
+    this.jsonKey = jsonKey;
     this.ignoreKey = ignoreKey;
     this.ignoreKeyTopics = ignoreKeyTopics;
     this.ignoreSchema = ignoreSchema;
@@ -94,6 +97,7 @@ public class ElasticsearchWriter {
   public static class Builder {
     private final JestClient client;
     private String type;
+    private boolean jsonKey = false;
     private boolean ignoreKey = false;
     private Set<String> ignoreKeyTopics = Collections.emptySet();
     private boolean ignoreSchema = false;
@@ -113,6 +117,11 @@ public class ElasticsearchWriter {
 
     public Builder setType(String type) {
       this.type = type;
+      return this;
+    }
+
+    public Builder setJsonKey(boolean jsonKey) {
+      this.jsonKey = jsonKey;
       return this;
     }
 
@@ -172,6 +181,7 @@ public class ElasticsearchWriter {
       return new ElasticsearchWriter(
           client,
           type,
+          jsonKey,
           ignoreKey,
           ignoreKeyTopics,
           ignoreSchema,
@@ -207,7 +217,7 @@ public class ElasticsearchWriter {
         existingMappings.add(index);
       }
 
-      final IndexableRecord indexableRecord = DataConverter.convertRecord(sinkRecord, index, type, ignoreKey, ignoreSchema);
+      final IndexableRecord indexableRecord = DataConverter.convertRecord(sinkRecord, index, type, jsonKey, ignoreKey, ignoreSchema);
 
       bulkProcessor.add(indexableRecord, flushTimeoutMs);
     }
