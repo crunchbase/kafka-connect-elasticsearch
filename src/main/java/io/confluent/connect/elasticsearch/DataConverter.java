@@ -123,6 +123,11 @@ public class DataConverter {
 
     }
 
+    // TODO find a better way to deal with this hacky hack hack
+    if (type.equals("self") && id.contains("%")) {
+      type = "modulo";
+    }
+
     final String payload = new String(JSON_CONVERTER.fromConnectData(record.topic(), schema, value), StandardCharsets.UTF_8);
     return new IndexableRecord(new Key(index, type, id), payload, record.kafkaOffset());
   }
